@@ -24,12 +24,13 @@ def treat_raw_orders():
     group_list = pd.read_sql("SELECT * FROM bd_risco..Pre_Grupos WHERE data = (SELECT MAX(data) FROM BD_RISCO..Pre_Grupos)", conn)
     group_list['FundoID']=group_list['FundoID'].astype(int)
 
+    print(27)
     # Filter group to funds info
     funds_info = group_list[['FundoID','nmFundo','CD_CARTEIRA','vlPatrimonio','CD_CCI']].groupby('FundoID',as_index =False).last()
 
     # Upodate group info
     upodateRawGroups(funds_info, conn)
-
+    print(33)
     # Get relevant Risk groups
     group_risk = group_list['Grupo'].unique()
     group_trade = trades_list['GrupoRaw'].unique()
@@ -37,7 +38,9 @@ def treat_raw_orders():
     # See if we need taylor groups
     group_add = group_trade[~np.isin(group_trade,group_risk)]
     if len(group_add)>0:
-        sql_string = "SELECT C1.GroupName, C2.* FROM (SELECT GroupName,GroupID FROM Trade_Grupos_Info WHERE GroupName IN ('{}')) AS C1 " \
+        sql_string = "SELECT C1.GroupName, C2.* FROM (" \
+                     "SELECT GroupName,MAX(GroupID) AS GroupID  FROM Trade_Grupos_Info WHERE GroupName IN ('{}') GROUP BY GroupName" \
+                     ") AS C1 " \
             "INNER JOIN Trade_Grupos_Detail AS C2 ON C1.GroupID = C2.GroupID".format("','".join(group_add))
         group_list_mesa = pd.read_sql(sql_string,conn)
         group_list_mesa['Participacao'] = 1
@@ -50,8 +53,9 @@ def treat_raw_orders():
                     group_list_mesa.loc[group_i.index,'Participacao'] = group_i.Quant.values / np.sum(
                         group_i.Quant.values)
                 else:
-                    group_list_mesa.loc[group_i.index,'Participacao'] = group_i.Ratio.values * group_i.vlPatrimonio.values / np.sum(group_i.Quant.values)
-
+                    group_list_mesa_sum = group_i.Ratio.values * group_i.vlPatrimonio.values
+                    group_list_mesa.loc[group_i.index,'Participacao'] = group_list_mesa_sum / np.sum(group_list_mesa_sum)
+    print(58)
     # Treat template tickers
     tickers_treated = tickerTreat(trades_list, conn)
 
@@ -62,7 +66,7 @@ def treat_raw_orders():
     conn_cursor.execute(
         "DELETE FROM Trade_Orders WHERE Date0 = CONVERT(char(10),GETDATE(),126)")
     orders_detail_data = []
-
+    print(69)
     col_save = ['Quantidade','Preco','Est1','Est2','Est3','Owner0','Date0','FillType','FillAsset','FillEst',
                 'TradeRational','TickerID','CorretoraID','SaveType']
     for name_i, orders_i in tickers_treated.groupby(['GrupoRaw','TickerID','C_V','Est1','Est2','Est3']):
@@ -72,9 +76,12 @@ def treat_raw_orders():
             group_i = group_list[['GrupoID','FundoID','Participacao']].loc[group_list.Grupo==name_i[0]].copy()
         else:
             group_type = 'novo'
-            group_i = group_list_mesa[['GroupId','FundoID','Participacao']].loc[group_list.Grupo==name_i[0]].copy()
+            group_i = group_list_mesa[['GroupId','FundoID','Participacao']].loc[group_list_mesa.GroupName==name_i[0]].copy()
+            group_i.columns = ['GrupoID','FundoID','Participacao']
 
         # Faz o split
+        print(orders_i)
+        print(group_i)
         split_ordens =  ordem_tree(
                 orders_i.Quantidade.values,  # quantity traded and not allocated
                 orders_i.Preco.values,  # price of each trade
@@ -90,7 +97,6 @@ def treat_raw_orders():
             ponta_curta = orders_i[trades_list.columns].copy()
             ponta_curta['Preco']=orders_i['PrecoAux']
             ponta_curta['C_V']='V' if orders_i.C_V[0]=='C' else 'C'
-            print("95")
             ponta_longa = orders_i[trades_list.columns].copy()
             ponta_longa['Preco'] = orders_i['PrecoAux']+orders_i['Preco']
             venc_aux = datetime.strptime(orders_i.Vencimento[0], '%Y-%m-%d')+relativedelta(months=+1)

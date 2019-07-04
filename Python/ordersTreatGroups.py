@@ -42,10 +42,9 @@ def upodateRawGroups(funds_info,conn):
             group_id = group_id.GroupId[0]
 
             # Add group details
-            group_raw.ID.iloc[group_i.index]=group_id
+            group_raw.loc[group_i.index,'ID']=group_id
 
         # To avoid problems with null value
-
         isQuant = np.isnan(group_raw.Ratio)
         sql_insert_data = [
                 (row.ID,
