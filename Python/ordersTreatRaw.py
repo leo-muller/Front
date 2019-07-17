@@ -49,7 +49,7 @@ def treat_raw_orders():
                                                 right_on='FundoID',how='left')
         for name_i, group_i in group_list_mesa.groupby('GroupId'):
             if len(group_i.Ratio) > 1:
-                if (group_i.Ratio.values[0]==None) | np.isnan(group_i.Ratio.values[0]):
+                if group_i.Ratio.values[0]==None:
                     group_list_mesa.loc[group_i.index,'Participacao'] = group_i.Quant.values / np.sum(
                         group_i.Quant.values)
                 else:
@@ -80,8 +80,6 @@ def treat_raw_orders():
             group_i.columns = ['GrupoID','FundoID','Participacao']
 
         # Faz o split
-        print(orders_i)
-        print(group_i)
         split_ordens =  ordem_tree(
                 orders_i.Quantidade.values,  # quantity traded and not allocated
                 orders_i.Preco.values,  # price of each trade

@@ -17,6 +17,7 @@ def tickerExcelTemplate(trades_list,conn):
         # Compute tickers based on template
         trades_list['TickerBlg'] = ""
         trades_list['TickerBroker'] = ""
+        trades_list['MoVenc'] = ""
 
         for name_i, row_i in trades_list[valid].iterrows():
             venc_i_m = letterMonth[int(row_i['Vencimento'][5:7])-1]
@@ -27,6 +28,7 @@ def tickerExcelTemplate(trades_list,conn):
             if row_i['TickerBlgCore']!=None:
                 trades_list.loc[name_i, 'TickerBlg'] = row_i['TickerBlgCore']+ venc_i_m+ venc_i_y + " " + row_i['TickerBlgSufix']
             trades_list.loc[name_i, 'TickerBroker'] = row_i['TickerBrokerCore']+ venc_i_m+ venc_i_y
+            trades_list.loc[name_i, 'MoVenc'] = venc_i_m+ venc_i_y
 
         # Do we have
     return trades_list

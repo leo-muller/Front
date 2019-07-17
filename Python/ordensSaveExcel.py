@@ -1,13 +1,12 @@
 import pandas as pd
 import pyodbc
 import datetime
-import xlsxwriter
+from Python.ordersRJO import save_files_rjo
 import numpy as np
 
 def save_files():
     path_output = "K://Temp/Leonardo_Muller/Trades/"
     today_aux = np.datetime64(datetime.datetime.now())
-    today_aux2 = pd.to_datetime(today_aux)
 
     conn = pyodbc.connect('Driver={SQL SERVER};'
                           'Server=s01bds64;'
@@ -65,12 +64,12 @@ def save_files():
     # Salva tabelas
     # ============================================
 
-    xls_file_name = 'Trades_python_{}.xlsx'.format(today_aux2.strftime('%Y_%m_%d'))
+    xls_file_name = 'TradesPython{}.xlsx'.format(datetime.datetime.now().strftime('%Y_%m_%d'))
     writer = pd.ExcelWriter(path_output + xls_file_name, engine='xlsxwriter')
 
     # Futuros
     colsMitra = ['C_V','CD_CARTEIRA','TickerMitra','Quant','Preco','CorretoraMitra','PU','Est1','Est2','Est3',
-                 'Vazio','Vazio','Vazio','Vazio','Vazio',
+                 'Vazio','Vazio','Vazio',
                  'GrupoTexto','GrupoMotivo']
 
     rowsMitraFut = Trades_Info_Full['SaveType'].isin(('MitraFut','ItauMitraFut')).tolist()
@@ -79,6 +78,7 @@ def save_files():
     is_PU = MitraDf['TickerMitra'].apply(lambda x: x[:4]=='DI1F')
     MitraDf.loc[~is_PU,"PU"]=""
     MitraDf.loc[is_PU, "Preco"] = ""
+    MitraDf['CorretoraMitra']="ITAU REP"
     MitraDf.to_excel(writer, sheet_name='MitraFut')
 
     MitraDf['PU']=""
@@ -100,10 +100,28 @@ def save_files():
                            "PU da Operação"]
     MitraDf.to_excel(writer, sheet_name='Itau')
 
+    # Itau to text_file
+    txt_file_name = 'Trades_itau_{}.txt'.format(datetime.datetime.now().strftime('%Y_%m_%d'))
+    MitraDf.to_csv(path_output + txt_file_name, sep='\t', index=False)
+
+    # Info MO
+    colsMO = ['MoTicker', 'MoVenc', 'CD_CCI', 'Quant', 'Preco']
+    rowsMO = [not x for x in Trades_Info_Full.MoTicker.isnull().tolist()]
+    MitraDf = Trades_Info_Full.loc[rowsMO, colsMO].copy()
+    MitraDf['C_V'] = np.where(MitraDf['Quant'] > 0, "C", 'V')
+    MitraDf['COR']=114
+    MitraDf['Quant'] = np.abs(MitraDf['Quant'])
+    MitraDf['CD_CCI'] = MitraDf.CD_CCI.astype('int')
+    MitraDf.columns = ['Classe', 'Venc', 'CCI', 'Quant', 'Preco', 'C_V', 'COR']
+    MitraDf.to_excel(writer, sheet_name='MO')
+
+    # Fundos offshore baseado no arquivo
+    MitraOff = save_files_rjo(conn)
+    if not MitraOff is None:
+        MitraOff.to_excel(writer, sheet_name='TradesOff')
+
     writer.save()
 
-    # Itau to text_file
-    txt_file_name = 'Trades_python_{}.txt'.format(pd.to_datetime(today_aux).strftime('%Y_%m_%d'))
-    Trades_Itau.to_csv(path_output + txt_file_name, sep='\t', index=False)
+
 
 

@@ -101,7 +101,8 @@ RjoId  | int | id IDENTITY(1,1) (PK)
 MitraPrefix | varchar(10) | Prefixo ticker Mitra
 MitraSufix | varchar(10) | Sulfixo ticker Mitra
 Blg | varchar(10) | Prefixo Ticker Blg
-RJO | varchar(50) | Nome no site RJO
+TickerType | varchar(20) | Tipo de futuro 
+RJO | varchar(50) | Core do nome no site RJO
 FactRJO | int | Fator entre preço RJO e Blg
 
 #### Trade_Corretora
@@ -231,13 +232,11 @@ Date0 | date | DEFAULT CONVERT(char(10),GETDATE(),126)
 **SaveType** trades como rolagem precisamos salvar a rolagem (para o Itau) e o trade aberto (para o Mitra) 
 então temos:
 * **Itau**: Salvo apenas no Itau (DR1 por exemplo)
-* **MitraFut**: Salvo apenas no Mitra (C/V de Dol de DR1, futuro offshore)
+* **MitraFut**: Salvo apenas no Mitra (C/V de Dol de DR1)
+* **MitraOffFut**: Salvo apenas no Mitra na aba offshore
 * **MitraOpc**: Salvo apenas no Mitra na aba opc (Opcao de Bolsa)
 * **ItauMitraFut**: Salvo no itau e aba futuro Mitra (DI, UCA, IND..)
 * **ItauMitraOpt**: Salvo no itau e aba Opc Mitra (Opc FX, DDI...)
-
-
-
 
 #### Trade_Orders_Split
 

@@ -45,24 +45,26 @@ def upodateRawGroups(funds_info,conn):
             group_raw.loc[group_i.index,'ID']=group_id
 
         # To avoid problems with null value
-        isQuant = np.isnan(group_raw.Ratio)
-        sql_insert_data = [
-                (row.ID,
-                 row.FundoID,
-                 row.Quant
-                 ) for index_i, row in group_raw.loc[isQuant].iterrows()
-            ]
-        print(sql_insert_data)
-        sql_insert = "INSERT INTO Trade_Grupos_Detail (GroupId,FundoId,Quant) VALUES (?,?,?)"
-        conn_cursor.executemany(sql_insert, sql_insert_data)
-        conn_cursor.commit()
+        isQuant = group_raw.Ratio.isnull()
+        if(any(isQuant)):
+            sql_insert_data = [
+                    (row.ID,
+                     row.FundoID,
+                     row.Quant
+                     ) for index_i, row in group_raw.loc[isQuant].iterrows()
+                ]
+            print(sql_insert_data)
+            sql_insert = "INSERT INTO Trade_Grupos_Detail (GroupId,FundoId,Quant) VALUES (?,?,?)"
+            conn_cursor.executemany(sql_insert, sql_insert_data)
+            conn_cursor.commit()
 
-        sql_insert_data = [
-                (row.ID,
-                 row.FundoID,
-                 row.Ratio
-                 ) for index_i, row in group_raw.loc[~isQuant].iterrows()
-            ]
-        sql_insert = "INSERT INTO Trade_Grupos_Detail (GroupId,FundoId,Ratio) VALUES (?,?,?)"
-        conn_cursor.executemany(sql_insert, sql_insert_data)
-        conn_cursor.commit()
+        if(not all(isQuant)):
+            sql_insert_data = [
+                    (row.ID,
+                     row.FundoID,
+                     row.Ratio
+                     ) for index_i, row in group_raw.loc[~isQuant].iterrows()
+                ]
+            sql_insert = "INSERT INTO Trade_Grupos_Detail (GroupId,FundoId,Ratio) VALUES (?,?,?)"
+            conn_cursor.executemany(sql_insert, sql_insert_data)
+            conn_cursor.commit()
