@@ -51,11 +51,6 @@ def tickerTreat(trades_list,conn):
         conn_cursor.executemany(sql_query, sql_insert_data)
         conn_cursor.commit()
 
-
-
-
-
-
         # Update
         ticker_list = pd.read_sql("SELECT TickerID, TickerMitra, TickerType AS TickerTypeSQL FROM Trade_Asset_Info", conn)
         trades_treated = trades_mitra.merge(ticker_list,

@@ -21,10 +21,9 @@ def treat_raw_orders():
                           'Trusted_Connection=yes;')
 
     trades_list = pd.read_sql("SELECT * FROM Trade_Orders_Raw", conn)
-    group_list = pd.read_sql("SELECT * FROM bd_risco..Pre_Grupos WHERE data = (SELECT MAX(data) FROM BD_RISCO..Pre_Grupos)", conn)
+    group_list = pd.read_sql("SELECT * FROM bd_risco..pre_grupo_movonline WHERE data = (SELECT MAX(data) FROM BD_RISCO..pre_grupo_movonline)", conn)
     group_list['FundoID']=group_list['FundoID'].astype(int)
 
-    print(27)
     # Filter group to funds info
     funds_info = group_list[['FundoID','nmFundo','CD_CARTEIRA','vlPatrimonio','CD_CCI']].groupby('FundoID',as_index =False).last()
 
@@ -90,18 +89,21 @@ def treat_raw_orders():
             split_ordens = -1*split_ordens
 
         # Trata rolagem
-        if orders_i.TickerTemplate.iloc[0] == "FUT DOL DR1":
+        if orders_i.TickerTemplate.iloc[0] in ("FUT DOL DR1", "FUT WDO DR1", "FUT WIN IR1", "FUT IND IR1"):
             orders_i['SaveType']="Itau"
             ponta_curta = orders_i[trades_list.columns].copy()
             ponta_curta['Preco']=orders_i['PrecoAux']
-            ponta_curta['C_V']='V' if orders_i.C_V[0]=='C' else 'C'
+            ponta_curta['C_V']='V' if orders_i.C_V.values[0]=='C' else 'C'
             ponta_longa = orders_i[trades_list.columns].copy()
             ponta_longa['Preco'] = orders_i['PrecoAux']+orders_i['Preco']
-            venc_aux = datetime.strptime(orders_i.Vencimento[0], '%Y-%m-%d')+relativedelta(months=+1)
+            if orders_i.TickerTemplate.iloc[0] in ("FUT DOL DR1", "FUT WDO DR1"):
+                venc_aux = datetime.strptime(orders_i.Vencimento.values[0], '%Y-%m-%d')+relativedelta(months=+1)
+            else:
+                venc_aux = datetime.strptime(orders_i.Vencimento.values[0], '%Y-%m-%d')+relativedelta(months=+2)
             ponta_longa['Vencimento'] = venc_aux.strftime("%Y-%m-%d")
 
             order_add = ponta_curta.append(ponta_longa).reset_index(drop=True)
-            order_add['TickerRaw'] = "FUT DOL"
+            order_add['TickerRaw'] = orders_i.TickerTemplate.iloc[0][:7]
 
             order_add = tickerTreat(order_add, conn)
             order_add['SaveType'] = "MitraFut"

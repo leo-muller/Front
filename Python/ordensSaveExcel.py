@@ -37,8 +37,8 @@ def save_files():
 
     # Official groups information
     if len(grupos_id_padrao)>0:
-        sql_query = "SELECT  GrupoID,Grupo FROM BD_RISCO..Pre_Grupos WHERE (" \
-                    "data = (SELECT MAX(data) FROM BD_RISCO..Pre_Grupos) AND " \
+        sql_query = "SELECT  GrupoID,Grupo FROM BD_RISCO..pre_grupo_movonline WHERE (" \
+                    "data = (SELECT MAX(data) FROM BD_RISCO..pre_grupo_movonline) AND " \
                     "GrupoID IN ({})) GROUP BY GrupoID, Grupo".format(
             ",".join(grupos_id_padrao)
         )
@@ -75,7 +75,7 @@ def save_files():
     rowsMitraFut = Trades_Info_Full['SaveType'].isin(('MitraFut','ItauMitraFut')).tolist()
     MitraDf = Trades_Info_Full.loc[rowsMitraFut,colsMitra].copy()
     MitraDf['Quant']=np.abs(MitraDf['Quant'])
-    is_PU = MitraDf['TickerMitra'].apply(lambda x: x[:4]=='DI1F')
+    is_PU = MitraDf['TickerMitra'].apply(lambda x: x[:4]=='DI1F' or x[:4]=='DAPF')
     MitraDf.loc[~is_PU,"PU"]=""
     MitraDf.loc[is_PU, "Preco"] = ""
     MitraDf['CorretoraMitra']="ITAU REP"
@@ -105,13 +105,14 @@ def save_files():
     MitraDf.to_csv(path_output + txt_file_name, sep='\t', index=False)
 
     # Info MO
+    rowsMO = Trades_Info_Full.SaveType != 'Itau'
     colsMO = ['MoTicker', 'MoVenc', 'CD_CCI', 'Quant', 'Preco']
-    rowsMO = [not x for x in Trades_Info_Full.MoTicker.isnull().tolist()]
+    rowsMO = np.logical_and([not x for x in Trades_Info_Full.MoTicker.isnull().tolist()],rowsMO)
     MitraDf = Trades_Info_Full.loc[rowsMO, colsMO].copy()
+
     MitraDf['C_V'] = np.where(MitraDf['Quant'] > 0, "C", 'V')
     MitraDf['COR']=114
     MitraDf['Quant'] = np.abs(MitraDf['Quant'])
-    MitraDf['CD_CCI'] = MitraDf.CD_CCI.astype('int')
     MitraDf.columns = ['Classe', 'Venc', 'CCI', 'Quant', 'Preco', 'C_V', 'COR']
     MitraDf.to_excel(writer, sheet_name='MO')
 
@@ -119,6 +120,8 @@ def save_files():
     MitraOff = save_files_rjo(conn)
     if not MitraOff is None:
         MitraOff.to_excel(writer, sheet_name='TradesOff')
+
+    Trades_Info_Full.to_excel(writer, sheet_name='TradesFull')
 
     writer.save()
 
